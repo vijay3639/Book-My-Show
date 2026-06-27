@@ -9,8 +9,8 @@ pipeline {
     environment {
         SCANNER_HOME = tool 'sonar-scanner'
         DOCKER_IMAGE = 'vijay3639/bms:latest'
-        EKS_CLUSTER_NAME = 'vijay-eks'
-        AWS_REGION = 'us-east-1'
+        EKS_CLUSTER_NAME = 'vijay-ekss'
+        AWS_REGION = 'us-west-2'
     }
 
     stages {
@@ -22,7 +22,7 @@ pipeline {
 
         stage('Checkout from Git') {
             steps {
-                git branch: 'main', url: 'https://github.com/vijay3639/Book-My-Show.git'
+                git branch: 'master', url: 'https://github.com/vijay3639/Book-My-Show.git'
                 sh 'ls -la'  // Verify files after checkout
             }
         }
@@ -62,20 +62,6 @@ pipeline {
                 '''
             }
         }
-
-        stage('OWASP FS Scan') {
-            steps {
-                dependencyCheck additionalArguments: '--scan ./ --disableYarnAudit --disableNodeAudit', odcInstallation: 'DP-Check'
-                dependencyCheckPublisher pattern: '**/dependency-check-report.xml'
-            }
-        }
-
-        stage('Trivy FS Scan') {
-            steps {
-                sh 'trivy fs . > trivyfs.txt'
-            }
-        }
-
         stage('Docker Build & Push') {
             steps {
                 script {
@@ -96,9 +82,6 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    echo "Verifying AWS credentials..."
-                    aws sts get-caller-identity
-
                     echo "Configuring kubectl for EKS cluster..."
                     aws eks update-kubeconfig --name $EKS_CLUSTER_NAME --region $AWS_REGION
 
@@ -115,17 +98,6 @@ pipeline {
                     '''
                 }
             }
-        }
-    }
-
-    post {
-        always {
-            emailext attachLog: true,
-                subject: "'${currentBuild.result}'",
-                body: "Project: ${env.JOB_NAME}<br/>" +
-                      "Build Number: ${env.BUILD_NUMBER}<br/>" +
-                      "URL: ${env.BUILD_URL}<br/>",
-                to: 'vijaycloud36@gmail.com'
         }
     }
 }
